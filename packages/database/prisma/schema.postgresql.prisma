@@ -1,0 +1,8 @@
+// 云端 PostgreSQL 部署时，将 schema.prisma 中 datasource 替换为：
+//
+// datasource db {
+//   provider = "postgresql"
+//   url      = env("DATABASE_URL")
+// }
+//
+// 然后执行: pnpm db:migrate

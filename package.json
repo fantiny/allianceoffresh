@@ -1,0 +1,20 @@
+{
+  "name": "allianceoffresh",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @repo/web dev",
+    "build": "pnpm --filter @repo/database generate && pnpm --filter @repo/web build",
+    "start": "pnpm --filter @repo/web start",
+    "db:generate": "pnpm --filter @repo/database generate",
+    "db:migrate": "pnpm --filter @repo/database migrate",
+    "db:push": "pnpm --filter @repo/database push",
+    "db:studio": "pnpm --filter @repo/database studio",
+    "seed:excel": "pnpm --filter @repo/database seed:excel",
+    "test": "pnpm --filter @repo/database test",
+    "lint": "pnpm -r lint"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

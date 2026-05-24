@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  createdAt  DateTime    @default(now())
+  salesLines SalesLine[]
+}
+
+model Product {
+  id                 String              @id @default(cuid())
+  name               String              @unique
+  unit               String              @default("斤")
+  isDeposit          Boolean             @default(false) @map("is_deposit")
+  createdAt          DateTime            @default(now())
+  aliases            ProductAlias[]
+  salesLines         SalesLine[]
+  priceQuotes        PriceQuote[]
+  purchaseLines      PurchaseLine[]
+  inventoryMovements InventoryMovement[]
+}
+
+model ProductAlias {
+  id        String  @id @default(cuid())
+  alias     String  @unique
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Venue {
+  id         String      @id @default(cuid())
+  code       String      @unique
+  createdAt  DateTime    @default(now())
+  salesLines SalesLine[]
+}
+
+model PaymentStatus {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  salesLines SalesLine[]
+}
+
+model SalesLine {
+  id                String        @id @default(cuid())
+  lineNo            Int           @map("line_no")
+  deliveryDate      DateTime      @map("delivery_date")
+  invoiceNo         String?       @map("invoice_no")
+  customerId        String        @map("customer_id")
+  venueId           String        @map("venue_id")
+  productId         String        @map("product_id")
+  quoteProductName  String?       @map("quote_product_name")
+  unit              String        @default("斤")
+  quantity          Float
+  unitPrice         Float         @map("unit_price")
+  standardPrice     Float         @map("standard_price")
+  orderAmount       Float         @map("order_amount")
+  actualPrice       Float?        @map("actual_price")
+  returnQty         Float         @default(0) @map("return_qty")
+  returnAmount      Float         @default(0) @map("return_amount")
+  finalQty          Float         @map("final_qty")
+  settlementAmount  Float         @map("settlement_amount")
+  returnReason      String?       @map("return_reason")
+  returnInvoiceNo   String?       @map("return_invoice_no")
+  paymentStatusId   String        @map("payment_status_id")
+  unpaidAmount      Float         @default(0) @map("unpaid_amount")
+  unpaidExDeposit   Float         @default(0) @map("unpaid_ex_deposit")
+  remark            String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  customer          Customer      @relation(fields: [customerId], references: [id])
+  venue             Venue         @relation(fields: [venueId], references: [id])
+  product           Product       @relation(fields: [productId], references: [id])
+  paymentStatus     PaymentStatus @relation(fields: [paymentStatusId], references: [id])
+
+  @@unique([deliveryDate, invoiceNo, customerId, productId, lineNo])
+  @@index([deliveryDate])
+  @@index([customerId])
+  @@index([productId])
+}
+
+model PriceQuote {
+  id            String   @id @default(cuid())
+  quoteDate     DateTime @map("quote_date")
+  seqNo         String?  @map("seq_no")
+  productId     String   @map("product_id")
+  unit          String   @default("斤")
+  shuangfuPrice Float?   @map("shuangfu_price")
+  alliancePrice Float?   @map("alliance_price")
+  memberPrice   Float?   @map("member_price")
+  spec          String?
+  remark        String?
+  adjustNote    String?  @map("adjust_note")
+  product       Product  @relation(fields: [productId], references: [id])
+
+  @@unique([quoteDate, productId, seqNo])
+  @@index([quoteDate])
+}
+
+model PurchaseOrder {
+  id        String         @id @default(cuid())
+  orderDate DateTime       @map("order_date")
+  supplier  String
+  remark    String?
+  createdAt DateTime       @default(now())
+  lines     PurchaseLine[]
+}
+
+model PurchaseLine {
+  id              String        @id @default(cuid())
+  purchaseOrderId String        @map("purchase_order_id")
+  productId       String        @map("product_id")
+  quantity        Float
+  unitPrice       Float         @map("unit_price")
+  amount          Float
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product         Product       @relation(fields: [productId], references: [id])
+}
+
+model InventoryMovement {
+  id        String   @id @default(cuid())
+  moveDate  DateTime @map("move_date")
+  productId String   @map("product_id")
+  type      String
+  quantity  Float
+  remark    String?
+  refId     String?  @map("ref_id")
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@index([moveDate])
+  @@index([productId])
+}
+
+model ImportBatch {
+  id        String   @id @default(cuid())
+  filename  String
+  fileHash  String   @map("file_hash")
+  mode      String
+  stats     String
+  warnings  String?
+  createdAt DateTime @default(now()) @map("created_at")
+}
+
+model AppSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}

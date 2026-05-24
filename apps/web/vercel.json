@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd ../.. && pnpm install && pnpm db:generate && pnpm db:migrate && pnpm --filter @repo/web build",
+  "installCommand": "pnpm install",
+  "framework": "nextjs",
+  "regions": ["hkg1"]
+}

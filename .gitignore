@@ -1,0 +1,22 @@
+node_modules
+.next
+dist
+.env
+.env.local
+data/app.db
+data/app.db-journal
+packages/data/
+**/*.db
+**/*.db-journal
+data/uploads
+
+# 真实业务数据 — 切勿提交
+data/samples/*.xlsx
+data/**/*.xlsx
+*.xlsx
+!**/.gitkeep
+*.log
+.DS_Store
+.turbo
+coverage
+.vercel
