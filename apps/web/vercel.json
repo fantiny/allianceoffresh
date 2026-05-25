@@ -1,6 +1,7 @@
 {
-  "buildCommand": "cd ../.. && pnpm install && pnpm db:generate && pnpm db:migrate && pnpm --filter @repo/web build",
-  "installCommand": "pnpm install",
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "cd ../.. && pnpm install",
+  "buildCommand": "cd ../.. && pnpm db:generate:vercel && pnpm db:push:vercel && pnpm --filter @repo/web build",
   "framework": "nextjs",
   "regions": ["hkg1"]
 }

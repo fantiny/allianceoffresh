@@ -30,7 +30,7 @@ pnpm seed:excel
 pnpm dev
 ```
 
-浏览器访问 http://localhost:3000
+浏览器访问 http://localhost:3344（端口见 [`config/app.json`](config/app.json)）
 
 ## 一键 Docker 部署
 
@@ -42,11 +42,13 @@ docker compose up --build
 
 ## 云端部署（Vercel + PostgreSQL）
 
-1. 在 [Neon](https://neon.tech) 或 Supabase 创建 PostgreSQL 数据库
-2. 修改 `packages/database/prisma/schema.prisma` 中 `provider = "postgresql"`
-3. 设置环境变量 `DATABASE_URL=postgresql://...`
-4. 执行 `pnpm db:migrate` 后部署到 Vercel
-5. 首次部署后访问 `/import` 上传 Excel 或使用 `pnpm seed:excel`
+**新 Vercel 账号逐步说明见 [docs/DEPLOY-VERCEL.md](docs/DEPLOY-VERCEL.md)**
+
+简要步骤：
+
+1. 在 [vercel.com](https://vercel.com/signup) 注册新账号并连接 GitHub
+2. 导入仓库 `fantiny/allianceoffresh`，添加 Neon PostgreSQL 与 `DATABASE_URL`
+3. 部署后访问 `/import` 上传 Excel（勿将真实 Excel 提交到 Git）
 
 ## 环境变量
 

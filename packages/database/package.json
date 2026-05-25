@@ -13,8 +13,10 @@
   },
   "scripts": {
     "generate": "prisma generate",
+    "generate:vercel": "prisma generate --schema=prisma/schema.vercel.prisma",
     "migrate": "prisma migrate deploy",
     "push": "prisma db push",
+    "push:vercel": "prisma db push --schema=prisma/schema.vercel.prisma --accept-data-loss",
     "studio": "prisma studio",
     "seed:excel": "tsx src/seed-excel.ts",
     "test": "vitest run"

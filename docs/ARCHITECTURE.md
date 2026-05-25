@@ -75,14 +75,15 @@ allianceoffresh/
 
 - 镜像：Node 20 Alpine
 - Volume：`./data` → SQLite 文件与上传目录
-- 端口：3000
+- 端口：3344（配置见 `config/app.json`）
 - 启动：`docker compose up --build`
 
 ### 云端 Vercel
 
-- `DATABASE_URL=postgresql://...`（Neon / Supabase）
-- `prisma migrate deploy` 在 build 或 postinstall
-- 不支持 SQLite（使用 PostgreSQL provider）
+- 新账号注册与部署步骤见 [DEPLOY-VERCEL.md](./DEPLOY-VERCEL.md)
+- `DATABASE_URL=postgresql://...`（Neon / Supabase，经 Marketplace 创建）
+- 构建使用 `schema.vercel.prisma` + `pnpm db:push:vercel`
+- 不支持 SQLite（无持久化磁盘）
 
 环境变量：
 
