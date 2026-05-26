@@ -7,6 +7,7 @@ import { Upload } from "lucide-react";
 export default function ImportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [mode, setMode] = useState<"replace" | "append">("replace");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
     stats?: Record<string, number>;
@@ -22,7 +23,13 @@ export default function ImportPage() {
     form.append("file", file);
     form.append("mode", mode);
     try {
-      const res = await fetch("/api/import", { method: "POST", body: form });
+      const headers: Record<string, string> = {};
+      if (password) headers["authorization"] = `Bearer ${password}`;
+      const res = await fetch("/api/import", {
+        method: "POST",
+        body: form,
+        headers,
+      });
       const data = await res.json();
       if (!res.ok) setResult({ error: data.error ?? "导入失败" });
       else setResult({ stats: data.stats, warnings: data.warnings });
@@ -73,6 +80,16 @@ export default function ImportPage() {
               />
               追加导入
             </label>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm text-slate-600">管理密码</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="请输入管理密码"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+            />
           </div>
           <button
             onClick={handleImport}
