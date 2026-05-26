@@ -3,6 +3,9 @@ import { parseWorkbookBuffer } from "@repo/database/src/excel/parser";
 import { importWorkbook } from "@repo/database/src/excel/importer";
 import { NextRequest, NextResponse } from "next/server";
 
+// Vercel Hobby plan allows up to 60s; default is 10s which is too short for large files
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   if (!checkAuth(req)) return unauthorizedResponse();
 
