@@ -14,6 +14,7 @@ import {
   CreditCard,
   TrendingUp,
   LayoutDashboard,
+  Tags,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { COMPANY_INFO } from "@repo/shared";
@@ -29,6 +30,7 @@ const nav = [
   { href: "/reports/inventory", label: "进销存简表", icon: Warehouse },
   { href: "/sales", label: "销售明细", icon: ShoppingCart },
   { href: "/purchases", label: "采购管理", icon: Package },
+  { href: "/products", label: "商品名称管理", icon: Tags },
   { href: "/inventory", label: "库存流水", icon: Warehouse },
   { href: "/import", label: "数据导入", icon: Upload },
   { href: "/export", label: "数据导出", icon: FileSpreadsheet },
