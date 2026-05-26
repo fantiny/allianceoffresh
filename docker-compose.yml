@@ -2,11 +2,12 @@ services:
   web:
     build: .
     ports:
-      - "3000:3000"
+      - "3344:3344"
     volumes:
       - ./data:/app/data
     environment:
       - DATABASE_URL=file:./data/app.db
+      - PORT=3344
       - AUTO_INVENTORY=true
       # - ADMIN_PASSWORD=your-secret
     restart: unless-stopped
