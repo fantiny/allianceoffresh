@@ -8,6 +8,8 @@
     ".": "./src/index.ts",
     "./src/excel/parser": "./src/excel/parser.ts",
     "./src/excel/importer": "./src/excel/importer.ts",
+    "./src/excel/purchase-parser": "./src/excel/purchase-parser.ts",
+    "./src/excel/purchase-importer": "./src/excel/purchase-importer.ts",
     "./src/excel/exporter": "./src/excel/exporter.ts",
     "./src/reports": "./src/reports.ts"
   },
