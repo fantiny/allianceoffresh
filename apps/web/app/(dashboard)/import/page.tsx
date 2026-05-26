@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardTitle } from "@/components/ui/card";
-import { Upload } from "lucide-react";
+import { Upload, Tags } from "lucide-react";
+import Link from "next/link";
 
 // ── Sales Import ──────────────────────────────────────────────────────────────
 
@@ -29,11 +30,7 @@ function SalesImportCard({ password }: { password: string }) {
     try {
       const headers: Record<string, string> = {};
       if (password) headers["authorization"] = `Bearer ${password}`;
-      const res = await fetch("/api/import", {
-        method: "POST",
-        body: form,
-        headers,
-      });
+      const res = await fetch("/api/import", { method: "POST", body: form, headers });
       const data = await res.json();
       if (!res.ok) setResult({ error: data.error ?? "导入失败" });
       else setResult({ stats: data.stats, warnings: data.warnings });
@@ -140,11 +137,7 @@ function PurchaseImportCard({ password }: { password: string }) {
     try {
       const headers: Record<string, string> = {};
       if (password) headers["authorization"] = `Bearer ${password}`;
-      const res = await fetch("/api/import/purchases", {
-        method: "POST",
-        body: form,
-        headers,
-      });
+      const res = await fetch("/api/import/purchases", { method: "POST", body: form, headers });
       const data = await res.json();
       if (!res.ok) setResult({ error: data.error ?? "导入失败" });
       else setResult(data);
@@ -208,15 +201,19 @@ function PurchaseImportCard({ password }: { password: string }) {
               <li>库存流水：{result.stats.inventory} 条</li>
               {result.stats.newProducts > 0 && (
                 <li className="text-amber-600">
-                  新增商品（进货名）：{result.stats.newProducts} 个
-                  {result.unmapped && result.unmapped.length > 0 && (
-                    <span className="ml-1 text-xs text-slate-500">
-                      ——请在下方"商品名对照"中设置进销名称对应关系
-                    </span>
-                  )}
+                  新增进货商品：{result.stats.newProducts} 个
                 </li>
               )}
             </ul>
+          )}
+          {result.stats && result.stats.newProducts > 0 && (
+            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+              有部分进货商品未匹配到销售商品，请前往
+              <Link href="/products" className="mx-1 font-medium underline">
+                商品名称管理
+              </Link>
+              设置进销名称对应关系。
+            </div>
           )}
           {result.warnings && result.warnings.length > 0 && (
             <details className="mt-3">
@@ -230,123 +227,6 @@ function PurchaseImportCard({ password }: { password: string }) {
           )}
         </div>
       )}
-    </Card>
-  );
-}
-
-// ── Product Alias Manager ─────────────────────────────────────────────────────
-
-type AliasEntry = {
-  alias: string;
-  productId: string;
-  product: { id: string; name: string };
-};
-
-type Product = { id: string; name: string };
-
-function ProductAliasCard({ password }: { password: string }) {
-  const [aliases, setAliases] = useState<AliasEntry[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [form, setForm] = useState({ alias: "", productId: "" });
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState("");
-
-  function load() {
-    fetch("/api/product-aliases").then((r) => r.json()).then(setAliases);
-    fetch("/api/master").then((r) => r.json()).then((d) => setProducts(d.products));
-  }
-
-  useEffect(() => { load(); }, []);
-
-  async function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.alias.trim() || !form.productId) return;
-    setSaving(true);
-    setMsg("");
-    try {
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (password) headers["authorization"] = `Bearer ${password}`;
-      const res = await fetch("/api/product-aliases", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ alias: form.alias.trim(), productId: form.productId }),
-      });
-      if (res.ok) {
-        setForm({ alias: "", productId: "" });
-        setMsg("已保存");
-        load();
-      } else {
-        const d = await res.json();
-        setMsg(d.error ?? "保存失败");
-      }
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDelete(alias: string) {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (password) headers["authorization"] = `Bearer ${password}`;
-    await fetch("/api/product-aliases", {
-      method: "DELETE",
-      headers,
-      body: JSON.stringify({ alias }),
-    });
-    load();
-  }
-
-  return (
-    <Card className="max-w-xl">
-      <CardTitle>商品名对照（进货名 → 销售名）</CardTitle>
-      <p className="mt-1 text-xs text-slate-500">
-        进货单里的商品名与销售系统名称不同时，在此设置对应关系。导入进货数据时自动使用。
-      </p>
-      <form onSubmit={handleAdd} className="mt-4 flex gap-2">
-        <input
-          placeholder="进货名称（如：小水白）"
-          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
-          value={form.alias}
-          onChange={(e) => setForm({ ...form, alias: e.target.value })}
-        />
-        <select
-          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand"
-          value={form.productId}
-          onChange={(e) => setForm({ ...form, productId: e.target.value })}
-        >
-          <option value="">对应销售商品</option>
-          {products.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-lg bg-brand px-4 py-2 text-sm text-white hover:bg-brand-dark disabled:opacity-50"
-        >
-          添加
-        </button>
-      </form>
-      {msg && <p className="mt-2 text-xs text-green-600">{msg}</p>}
-      <ul className="mt-4 divide-y divide-slate-100 text-sm">
-        {aliases.length === 0 && (
-          <li className="py-2 text-slate-400">暂无对照记录</li>
-        )}
-        {aliases.map((a) => (
-          <li key={a.alias} className="flex items-center justify-between py-2">
-            <span>
-              <span className="font-medium text-slate-700">{a.alias}</span>
-              <span className="mx-2 text-slate-400">→</span>
-              <span className="text-slate-600">{a.product.name}</span>
-            </span>
-            <button
-              onClick={() => handleDelete(a.alias)}
-              className="text-xs text-red-400 hover:text-red-600"
-            >
-              删除
-            </button>
-          </li>
-        ))}
-      </ul>
     </Card>
   );
 }
@@ -378,7 +258,27 @@ export default function ImportPage() {
       <div className="space-y-8">
         <SalesImportCard password={password} />
         <PurchaseImportCard password={password} />
-        <ProductAliasCard password={password} />
+
+        {/* Link to product mapping page */}
+        <div className="max-w-xl rounded-xl border border-slate-200 bg-slate-50 p-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand/10">
+              <Tags className="h-5 w-5 text-brand" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-700">商品名称管理</p>
+              <p className="text-xs text-slate-500">
+                设置进货名与销售商品的对应关系，关联后系统自动合并显示
+              </p>
+            </div>
+            <Link
+              href="/products"
+              className="ml-auto shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            >
+              前往管理 →
+            </Link>
+          </div>
+        </div>
       </div>
     </>
   );
