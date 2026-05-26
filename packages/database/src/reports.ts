@@ -2,6 +2,20 @@ import { prisma } from "./index";
 import type { ReportFilters } from "@repo/shared";
 import { buildSalesWhere } from "@repo/shared";
 
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+/** The display/group label for a product: custom groupName first, then name. */
+function productLabel(p: { name: string; groupName: string | null }): string {
+  return p.groupName?.trim() || p.name;
+}
+
+/** The display/group label for a customer: custom groupName first, then name. */
+function customerLabel(c: { name: string; groupName: string | null }): string {
+  return c.groupName?.trim() || c.name;
+}
+
+// ── Overview ─────────────────────────────────────────────────────────────────
+
 export async function getOverview(filters: ReportFilters) {
   const where = buildSalesWhere(filters);
   const agg = await prisma.salesLine.aggregate({
@@ -62,6 +76,8 @@ export async function getOverview(filters: ReportFilters) {
   };
 }
 
+// ── Daily Sales ───────────────────────────────────────────────────────────────
+
 export async function getDailySales(filters: ReportFilters) {
   const where = buildSalesWhere(filters);
   const rows = await prisma.salesLine.groupBy({
@@ -86,6 +102,8 @@ export async function getDailySales(filters: ReportFilters) {
   }));
 }
 
+// ── Customer Report ───────────────────────────────────────────────────────────
+
 export async function getCustomerReport(filters: ReportFilters) {
   const where = buildSalesWhere(filters);
   const rows = await prisma.salesLine.groupBy({
@@ -101,19 +119,65 @@ export async function getCustomerReport(filters: ReportFilters) {
     _count: true,
     orderBy: { _sum: { settlementAmount: "desc" } },
   });
-  const customers = await prisma.customer.findMany();
-  const map = Object.fromEntries(customers.map((c) => [c.id, c.name]));
-  return rows.map((r) => ({
-    customerId: r.customerId,
-    customerName: map[r.customerId] ?? "未知",
-    orderAmount: r._sum.orderAmount ?? 0,
-    settlementAmount: r._sum.settlementAmount ?? 0,
-    returnAmount: r._sum.returnAmount ?? 0,
-    unpaidAmount: r._sum.unpaidAmount ?? 0,
-    unpaidExDeposit: r._sum.unpaidExDeposit ?? 0,
-    count: r._count,
-  }));
+
+  const customers = await prisma.customer.findMany({
+    select: { id: true, name: true, groupName: true },
+  });
+  const customerMap = new Map(customers.map((c) => [c.id, c]));
+
+  // Merge rows by groupName (or customer name if no group)
+  type GroupRow = {
+    customerIds: string[];
+    label: string;
+    orderAmount: number;
+    settlementAmount: number;
+    returnAmount: number;
+    unpaidAmount: number;
+    unpaidExDeposit: number;
+    count: number;
+  };
+  const grouped = new Map<string, GroupRow>();
+
+  for (const row of rows) {
+    const c = customerMap.get(row.customerId);
+    const label = c ? customerLabel(c) : "未知";
+    if (!grouped.has(label)) {
+      grouped.set(label, {
+        customerIds: [],
+        label,
+        orderAmount: 0,
+        settlementAmount: 0,
+        returnAmount: 0,
+        unpaidAmount: 0,
+        unpaidExDeposit: 0,
+        count: 0,
+      });
+    }
+    const g = grouped.get(label)!;
+    g.customerIds.push(row.customerId);
+    g.orderAmount += row._sum.orderAmount ?? 0;
+    g.settlementAmount += row._sum.settlementAmount ?? 0;
+    g.returnAmount += row._sum.returnAmount ?? 0;
+    g.unpaidAmount += row._sum.unpaidAmount ?? 0;
+    g.unpaidExDeposit += row._sum.unpaidExDeposit ?? 0;
+    g.count += row._count;
+  }
+
+  return [...grouped.values()]
+    .sort((a, b) => b.settlementAmount - a.settlementAmount)
+    .map((g) => ({
+      customerId: g.customerIds[0],
+      customerName: g.label,
+      orderAmount: g.orderAmount,
+      settlementAmount: g.settlementAmount,
+      returnAmount: g.returnAmount,
+      unpaidAmount: g.unpaidAmount,
+      unpaidExDeposit: g.unpaidExDeposit,
+      count: g.count,
+    }));
 }
+
+// ── Product Report ────────────────────────────────────────────────────────────
 
 export async function getProductReport(filters: ReportFilters) {
   const where = buildSalesWhere(filters);
@@ -130,20 +194,68 @@ export async function getProductReport(filters: ReportFilters) {
     _count: true,
     orderBy: { _sum: { settlementAmount: "desc" } },
   });
-  const products = await prisma.product.findMany();
-  const map = Object.fromEntries(products.map((p) => [p.id, p]));
-  return rows.map((r) => ({
-    productId: r.productId,
-    productName: map[r.productId]?.name ?? "未知",
-    isDeposit: map[r.productId]?.isDeposit ?? false,
-    orderAmount: r._sum.orderAmount ?? 0,
-    settlementAmount: r._sum.settlementAmount ?? 0,
-    returnAmount: r._sum.returnAmount ?? 0,
-    finalQty: r._sum.finalQty ?? 0,
-    returnQty: r._sum.returnQty ?? 0,
-    count: r._count,
-  }));
+
+  const products = await prisma.product.findMany({
+    select: { id: true, name: true, isDeposit: true, groupName: true },
+  });
+  const productMap = new Map(products.map((p) => [p.id, p]));
+
+  // Merge rows by groupName (or product name if no group)
+  type GroupRow = {
+    productIds: string[];
+    label: string;
+    isDeposit: boolean;
+    orderAmount: number;
+    settlementAmount: number;
+    returnAmount: number;
+    finalQty: number;
+    returnQty: number;
+    count: number;
+  };
+  const grouped = new Map<string, GroupRow>();
+
+  for (const row of rows) {
+    const p = productMap.get(row.productId);
+    const label = p ? productLabel(p) : "未知";
+    if (!grouped.has(label)) {
+      grouped.set(label, {
+        productIds: [],
+        label,
+        isDeposit: p?.isDeposit ?? false,
+        orderAmount: 0,
+        settlementAmount: 0,
+        returnAmount: 0,
+        finalQty: 0,
+        returnQty: 0,
+        count: 0,
+      });
+    }
+    const g = grouped.get(label)!;
+    g.productIds.push(row.productId);
+    g.orderAmount += row._sum.orderAmount ?? 0;
+    g.settlementAmount += row._sum.settlementAmount ?? 0;
+    g.returnAmount += row._sum.returnAmount ?? 0;
+    g.finalQty += row._sum.finalQty ?? 0;
+    g.returnQty += row._sum.returnQty ?? 0;
+    g.count += row._count;
+  }
+
+  return [...grouped.values()]
+    .sort((a, b) => b.settlementAmount - a.settlementAmount)
+    .map((g) => ({
+      productId: g.productIds[0],
+      productName: g.label,
+      isDeposit: g.isDeposit,
+      orderAmount: g.orderAmount,
+      settlementAmount: g.settlementAmount,
+      returnAmount: g.returnAmount,
+      finalQty: g.finalQty,
+      returnQty: g.returnQty,
+      count: g.count,
+    }));
 }
+
+// ── Venue Report ─────────────────────────────────────────────────────────────
 
 export async function getVenueReport(filters: ReportFilters) {
   const where = buildSalesWhere(filters);
@@ -163,6 +275,8 @@ export async function getVenueReport(filters: ReportFilters) {
     count: r._count,
   }));
 }
+
+// ── Payment Report ────────────────────────────────────────────────────────────
 
 export async function getPaymentReport(filters: ReportFilters) {
   const where = buildSalesWhere(filters);
@@ -194,14 +308,16 @@ export async function getPaymentReport(filters: ReportFilters) {
     unpaidLines: unpaidLines.map((l) => ({
       id: l.id,
       date: l.deliveryDate.toISOString().slice(0, 10),
-      customer: l.customer.name,
-      product: l.product.name,
+      customer: customerLabel(l.customer),
+      product: productLabel(l.product),
       settlement: l.settlementAmount,
       unpaid: l.unpaidAmount,
       status: l.paymentStatus.name,
     })),
   };
 }
+
+// ── Price Quote Report ────────────────────────────────────────────────────────
 
 export async function getPriceQuoteReport(filters: ReportFilters) {
   const where: Record<string, unknown> = {};
@@ -224,12 +340,14 @@ export async function getPriceQuoteReport(filters: ReportFilters) {
 
   return quotes.map((q) => ({
     date: q.quoteDate.toISOString().slice(0, 10),
-    product: q.product.name,
+    product: productLabel(q.product),
     shuangfu: q.shuangfuPrice,
     alliance: q.alliancePrice,
     member: q.memberPrice,
   }));
 }
+
+// ── Inventory Report ──────────────────────────────────────────────────────────
 
 export async function getInventoryReport(filters: ReportFilters) {
   const productWhere: Record<string, unknown> = {};
@@ -250,11 +368,7 @@ export async function getInventoryReport(filters: ReportFilters) {
       where: {
         productId: product.id,
         ...(filters.from || filters.to
-          ? {
-              purchaseOrder: {
-                orderDate: dateFilter,
-              },
-            }
+          ? { purchaseOrder: { orderDate: dateFilter } }
           : {}),
       },
       _sum: { quantity: true },
@@ -287,7 +401,7 @@ export async function getInventoryReport(filters: ReportFilters) {
 
     results.push({
       productId: product.id,
-      productName: product.name,
+      productName: productLabel(product),
       purchaseIn,
       saleOut: saleOut || soldQty,
       returnIn: returnIn || returnedQty,

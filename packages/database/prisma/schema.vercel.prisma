@@ -15,6 +15,7 @@ datasource db {
 model Customer {
   id         String      @id @default(cuid())
   name       String      @unique
+  groupName  String?     @map("group_name")
   createdAt  DateTime    @default(now())
   salesLines SalesLine[]
 }
@@ -24,6 +25,7 @@ model Product {
   name               String              @unique
   unit               String              @default("斤")
   isDeposit          Boolean             @default(false) @map("is_deposit")
+  groupName          String?             @map("group_name")
   createdAt          DateTime            @default(now())
   aliases            ProductAlias[]
   salesLines         SalesLine[]
